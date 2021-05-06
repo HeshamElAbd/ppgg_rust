@@ -33,19 +33,24 @@ pub mod text_parser
     }
     /// The function takes the mutation amino acid field, e.g. "32Q>32*" and returned a Result enum either containing an Ok or Err type.
     /// # Ok
-    /// a vector of strings that has three elements first the type of the mutation,
-    /// secnd the transcript id and third the change in the position and the sequence of the mutated amino acids.
+    /// a MutationInfo struct containg the position of the mutation in the reference and in the mutated amino acids, along with sequence 
+    /// representation for the mutated and reference seuqence
     /// # Errors 
-    /// incase the provided string does not have six pipe sperators
+    /// incase parsing the provided sequecne failed, a string coding for the error message will be retrained 
     ///```rust 
-    /// # let example_csq_string="stop_gained|RABGEF1|ENST00000484547|NMD|+|32Q>32*|66771993C>T".to_string();
-    /// # match split_csq_string(example_csq_string)
-    /// # {
-    /// #     Ok(fields) =>
-    /// #     {
-    /// #       for field in fields {println!("{}",field)};
-    /// #     }
-    /// # }
+    /// let mut_string="32Q>32*".to_string();
+    /// let res = text_parser::parse_amino_acid_field(mut_string).expect("Generating the parse_amino_acid failed");
+    /// let mut_info=data_structures::MutationInfo
+    /// {
+    ///     ref_aa_position:31, // zero-based indexing 
+    ///     mut_aa_position:31, // zero-based indexing 
+    ///     ref_aa:data_structures::MutatedString::Sequence("Q".to_string()),
+    ///     mut_aa:data_structures::MutatedString::NotSeq,
+    /// };
+    /// assert_eq!(mut_info.ref_aa_position,res.ref_aa_position); 
+    /// assert_eq!(mut_info.mut_aa_position,res.mut_aa_position); 
+    /// assert_eq!(data_structures::MutatedString::NotSeq,res.mut_aa); 
+    /// assert_eq!(data_structures::MutatedString::Sequence("Q".to_string()),res.ref_aa);
     ///```
     pub fn parse_amino_acid_field(input_string:String)->Result<MutationInfo,String>
     {
@@ -157,25 +162,74 @@ mod test_text_parser
         }
     }
     #[test]
-    #[ignore]
     fn test_parse_amino_acid_field_1()
     {
         let mut_string="32Q>32*".to_string();
         let res = text_parser::parse_amino_acid_field(mut_string).expect("Generating the parse_amino_acid failed");
         let mut_info=data_structures::MutationInfo
         {
-            ref_aa_position:32,
-            mut_aa_position:32,
-            ref_aa:"Q".to_string(),
+            ref_aa_position:31,
+            mut_aa_position:31,
+            ref_aa:data_structures::MutatedString::Sequence("Q".to_string()),
             mut_aa:data_structures::MutatedString::NotSeq,
-            len:0,
         };
         assert_eq!(mut_info.ref_aa_position,res.ref_aa_position); 
         assert_eq!(mut_info.mut_aa_position,res.mut_aa_position); 
-        assert_eq!(mut_info.ref_aa,res.ref_aa); 
-        assert_eq!(mut_info.mut_aa,res.mut_aa); 
-        assert_eq!(mut_info.len,res.len); 
+        assert_eq!(data_structures::MutatedString::NotSeq,res.mut_aa); 
+        assert_eq!(data_structures::MutatedString::Sequence("Q".to_string()),res.ref_aa); 
     }
+    #[test]
+    fn test_parse_amino_acid_field_2()
+    {
+        let mut_string="32QK>32*".to_string();
+        let res = text_parser::parse_amino_acid_field(mut_string).expect("Generating the parse_amino_acid failed");
+        let mut_info=data_structures::MutationInfo
+        {
+            ref_aa_position:31,
+            mut_aa_position:31,
+            ref_aa:data_structures::MutatedString::Sequence("QK".to_string()),
+            mut_aa:data_structures::MutatedString::NotSeq,
+        };
+        assert_eq!(mut_info.ref_aa_position,res.ref_aa_position); 
+        assert_eq!(mut_info.mut_aa_position,res.mut_aa_position); 
+        assert_eq!(mut_info.ref_aa,res.ref_aa);
+        assert_eq!(mut_info.mut_aa,res.mut_aa); 
+    }
+    #[test]
+    fn test_parse_amino_acid_field_3()
+    {
+        let mut_string="32QK>32NMKLOPLMNBJK*".to_string();
+        let res = text_parser::parse_amino_acid_field(mut_string).expect("Generating the parse_amino_acid failed");
+        let mut_info=data_structures::MutationInfo
+        {
+            ref_aa_position:31,
+            mut_aa_position:31,
+            ref_aa:data_structures::MutatedString::Sequence("QK".to_string()),
+            mut_aa:data_structures::MutatedString::EndSequence("NMKLOPLMNBJK*".to_string()),
+        };
+        assert_eq!(mut_info.ref_aa_position,res.ref_aa_position); 
+        assert_eq!(mut_info.mut_aa_position,res.mut_aa_position); 
+        assert_eq!(mut_info.ref_aa,res.ref_aa);
+        assert_eq!(mut_info.mut_aa,res.mut_aa);
+    }
+    #[test]
+    fn test_parse_amino_acid_field_4()
+    {
+        let mut_string="32*>32NMKLOPLMNBJK*".to_string();
+        let res = text_parser::parse_amino_acid_field(mut_string).expect("Generating the parse_amino_acid failed");
+        let mut_info=data_structures::MutationInfo
+        {
+            ref_aa_position:31,
+            mut_aa_position:31,
+            ref_aa:data_structures::MutatedString::NotSeq,
+            mut_aa:data_structures::MutatedString::EndSequence("NMKLOPLMNBJK*".to_string()),
+        };
+        assert_eq!(mut_info.ref_aa_position,res.ref_aa_position); 
+        assert_eq!(mut_info.mut_aa_position,res.mut_aa_position); 
+        assert_eq!(mut_info.ref_aa,res.ref_aa);
+        assert_eq!(mut_info.mut_aa,res.mut_aa);
+    }
+
     #[test]
     fn test_parse_amino_acid_seq_position()
     {
